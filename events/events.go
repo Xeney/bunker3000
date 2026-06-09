@@ -31,13 +31,12 @@ func ConstructEvent(event Event) (Event, error) {
 func ConstructEventsPool() []Event {
 	var pool []Event
 
-	// Событие 1: Оазис
 	ev1, _ := ConstructEvent(Event{
 		Message:  "Вы нашли чистый ручей среди скал.",
 		Variants: [2]string{"Напиться и набрать воды с собой", "Пройти мимо, опасаясь засады"},
 		Actions: [2]func(p *player.Player) error{
 			func(p *player.Player) error {
-				p.AddWater(5) // Безопасное добавление через наш новый метод
+				p.AddWater(5)
 				return nil
 			},
 			func(p *player.Player) error {
@@ -48,13 +47,11 @@ func ConstructEventsPool() []Event {
 	})
 	pool = append(pool, ev1)
 
-	// Событие 2: Стычка
 	ev2, _ := ConstructEvent(Event{
 		Message:  "На вас напал бродяга с ножом!",
 		Variants: [2]string{"Принять бой", "Отдать ему часть припасов и убежать"},
 		Actions: [2]func(p *player.Player) error{
 			func(p *player.Player) error {
-				// Получаем 30 урона в бою
 				return p.ChangeHealth(-30)
 			},
 			func(p *player.Player) error {
