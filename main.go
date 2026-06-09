@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bunker3000/events"
+	"bunker3000/player"
 	"fmt"
-	"main/events"
-	"main/player"
 )
 
 func main() {

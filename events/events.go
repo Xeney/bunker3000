@@ -1,9 +1,9 @@
 package events
 
 import (
+	"bunker3000/player"
 	"errors"
 	"fmt"
-	"main/player"
 	"math/rand"
 	"strings"
 )
