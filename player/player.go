@@ -37,23 +37,27 @@ func (p *Player) StartNewDay() error {
 		return errors.New("игра уже завершена")
 	}
 
-	fmt.Printf("--- День %d из %d ---\n", p.ThisDay, MaxDays)
+	fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+	fmt.Printf("          ДЕНЬ %d ИЗ %d\n", p.ThisDay, MaxDays)
+	fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
 	var damage int8 = 0
 
 	if p.Eat >= 1 {
 		p.Eat -= 1
+		fmt.Printf("🍗 Потрачено еды: 1 (осталось: %d)\n", p.Eat)
 	} else {
 		p.Eat = 0
-		fmt.Println("Предупреждение: Нет еды! Здоровье уменьшается.")
+		fmt.Println("⚠️ ПРЕДУПРЕЖДЕНИЕ: Нет еды! Здоровье уменьшается.")
 		damage += 20
 	}
 
 	if p.Water >= 2 {
 		p.Water -= 2
+		fmt.Printf("💧 Потрачено воды: 2 (осталось: %d)\n", p.Water)
 	} else {
 		p.Water = 0
-		fmt.Println("Предупреждение: Нет воды! Здоровье уменьшается.")
+		fmt.Println("⚠️ ПРЕДУПРЕЖДЕНИЕ: Нет воды! Здоровье уменьшается.")
 		damage += 20
 	}
 
@@ -64,12 +68,12 @@ func (p *Player) StartNewDay() error {
 			return errors.New("персонаж погиб от истощения")
 		}
 		p.Health -= damage
-		fmt.Printf("Текущее здоровье: %d%%\n", p.Health)
+		fmt.Printf("❤️ Потеря здоровья от истощения: -%d%% (осталось: %d%%)\n", damage, p.Health)
 	}
 
 	if p.ThisDay >= MaxDays {
 		p.Lock = true
-		fmt.Printf("Победа! Вы успешно продержались %d дней!\n", MaxDays)
+		fmt.Println("\n🎉 ПОБЕДА! Вы успешно продержались 7 дней! 🎉")
 		return nil
 	}
 
@@ -82,7 +86,7 @@ func (p *Player) AddEat(amount int8) {
 	if p.Eat > MaxResourceLimit {
 		p.Eat = MaxResourceLimit
 	}
-	fmt.Printf("Получено еды: +%d (Всего: %d)\n", amount, p.Eat)
+	fmt.Printf("🍗 Получено еды: +%d (Всего: %d)\n", amount, p.Eat)
 }
 
 func (p *Player) AddWater(amount int8) {
@@ -90,15 +94,18 @@ func (p *Player) AddWater(amount int8) {
 	if p.Water > MaxResourceLimit {
 		p.Water = MaxResourceLimit
 	}
-	fmt.Printf("Получено воды: +%d (Всего: %d)\n", amount, p.Water)
+	fmt.Printf("💧 Получено воды: +%d (Всего: %d)\n", amount, p.Water)
 }
 
 func (p *Player) PrintStatus() {
-	fmt.Println("\n📊 СТАТУС ИГРОКА:")
-	fmt.Printf("❤️ Здоровье: %d%%\n", p.Health)
-	fmt.Printf("🍗 Еда:      %d единиц\n", p.Eat)
-	fmt.Printf("💧 Вода:     %d единиц\n", p.Water)
-	fmt.Println("----------------------------------------")
+	fmt.Println("\n╔════════════════════════════════════╗")
+	fmt.Println("║        ТЕКУЩИЙ СТАТУС ИГРОКА       ║")
+	fmt.Println("╚════════════════════════════════════╝")
+	fmt.Printf("❤️  Здоровье: %d%%\n", p.Health)
+	fmt.Printf("🍗  Еда:      %d / %d\n", p.Eat, MaxResourceLimit)
+	fmt.Printf("💧  Вода:     %d / %d\n", p.Water, MaxResourceLimit)
+	fmt.Printf("📅  День:     %d / %d\n", p.ThisDay-1, MaxDays)
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 }
 
 func (p *Player) ChangeHealth(amount int8) error {
@@ -114,13 +121,16 @@ func (p *Player) ChangeHealth(amount int8) error {
 			return errors.New("персонаж погиб от полученных ран")
 		}
 		p.Health -= damage
-		fmt.Printf("Вы потеряли %d%% здоровья. Осталось: %d%%\n", damage, p.Health)
+		fmt.Printf("❤️ Потеря здоровья: -%d%% (осталось: %d%%)\n", damage, p.Health)
 	} else {
-		p.Health += amount
-		if p.Health > MaxHealth {
+		// Исправлено: проверяем переполнение при сложении
+		newHealth := int16(p.Health) + int16(amount)
+		if newHealth > int16(MaxHealth) {
 			p.Health = MaxHealth
+		} else {
+			p.Health = int8(newHealth)
 		}
-		fmt.Printf("Вы восстановили %d%% здоровья. Текущее: %d%%\n", amount, p.Health)
+		fmt.Printf("❤️ Восстановление здоровья: +%d%% (текущее: %d%%)\n", amount, p.Health)
 	}
 
 	return nil
@@ -136,4 +146,23 @@ func (p *Player) RandomResource(amount int8, resourceType string) {
 		p.AddEat(amount)
 		p.AddWater(amount)
 	}
+}
+
+// Добавьте в конец файла player.go
+func (p *Player) PrintDeathMessage() {
+	fmt.Println("\n╔════════════════════════════════════╗")
+	fmt.Println("║            💀 GAME OVER 💀         ║")
+	fmt.Println("╚════════════════════════════════════╝")
+
+	if p.Health <= 0 {
+		fmt.Println("Причина смерти: Полученные травмы")
+	} else if p.Eat <= 0 && p.Water <= 0 {
+		fmt.Println("Причина смерти: Голод и обезвоживание")
+	} else if p.Eat <= 0 {
+		fmt.Println("Причина смерти: Голод")
+	} else if p.Water <= 0 {
+		fmt.Println("Причина смерти: Обезвоживание")
+	}
+
+	fmt.Printf("Дней продержался: %d\n", p.ThisDay-1)
 }

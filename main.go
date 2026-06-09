@@ -3,25 +3,32 @@ package main
 import (
 	"bunker3000/events"
 	"bunker3000/player"
+	"bunker3000/utils"
 	"fmt"
 	"math/rand"
 	"time"
 )
 
 func main() {
-	// Инициализация генератора случайных чисел
 	rand.Seed(time.Now().UnixNano())
+	utils.Clear()
 
 	p := player.CreatePlayer()
 	eventPool := events.ConstructEventsPool()
 
-	fmt.Println("=== ДОБРО ПОЖАЛОВАТЬ В СИМУЛЯТОР ВЫЖИВАНИЯ ===")
+	fmt.Println("╔════════════════════════════════════════╗")
+	fmt.Println("║     ДОБРО ПОЖАЛОВАТЬ В БУНКЕР-3000     ║")
+	fmt.Println("╚════════════════════════════════════════╝")
 	p.PrintStatus()
+	utils.WaitEnter()
 
 	for !p.Lock {
+		utils.Clear()
+
 		err := p.StartNewDay()
 		if err != nil {
 			fmt.Printf("\n💀 Игра окончена: %s\n", err.Error())
+			utils.WaitEnter()
 			break
 		}
 
@@ -31,7 +38,8 @@ func main() {
 
 		ev, err := events.GetRandomEvent(eventPool)
 		if err != nil {
-			fmt.Printf("❌ Критическая ошибка пула событий: %s\n", err.Error())
+			fmt.Printf("❌ Ошибка: %s\n", err.Error())
+			utils.WaitEnter()
 			break
 		}
 
@@ -39,31 +47,62 @@ func main() {
 
 		var choice int
 		for {
-			fmt.Print("Введите ваш выбор (1 или 2): ")
+			fmt.Print("\n👉 Введите ваш выбор (1 или 2): ")
 			_, scanErr := fmt.Scan(&choice)
 
 			if scanErr != nil {
-				fmt.Println("Ошибка: Пожалуйста, введите корректное число.")
+				fmt.Println("❌ Ошибка: введите 1 или 2")
 				var discard string
 				fmt.Scanln(&discard)
 				continue
 			}
 
-			executeErr := ev.Execute(choice, &p)
+			resultMessage, executeErr := ev.Execute(choice, &p)
 			if executeErr != nil {
-				fmt.Printf("❌ %s. Попробуйте еще раз.\n", executeErr.Error())
+				fmt.Printf("❌ %s\n", executeErr.Error())
 				continue
 			}
 
+			utils.Clear()
+			fmt.Println("╔════════════════════════════════════════╗")
+			fmt.Println("║           РЕЗУЛЬТАТ ДЕЙСТВИЯ          ║")
+			fmt.Println("╚════════════════════════════════════════╝")
+			fmt.Printf("\n📌 %s\n", resultMessage)
+
+			break
+		}
+
+		if p.Lock {
+			if p.Health == 0 {
+				fmt.Println("\n💀 Игра окончена: Вы погибли")
+			}
+			utils.WaitEnter()
 			break
 		}
 
 		p.PrintStatus()
-		if p.Lock && p.Health == 0 {
-			fmt.Println("\n💀 Игра окончена: Вы погибли от полученных в событии повреждений.")
-			break
-		}
+		utils.WaitEnter()
 	}
 
-	fmt.Println("\n=== Спасибо за игру! ===")
+	utils.Clear()
+	fmt.Println("\n╔════════════════════════════════════════╗")
+	fmt.Println("║        СПАСИБО ЗА ИГРУ!                ║")
+	fmt.Println("╚════════════════════════════════════════╝")
+
+	fmt.Printf("\n📊 ИТОГОВАЯ СТАТИСТИКА:\n")
+	fmt.Printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+
+	if p.Health > 0 && p.Lock {
+		fmt.Printf("🏆 ПОБЕДА! %d из %d дней\n", p.ThisDay-1, player.MaxDays)
+	} else {
+		fmt.Printf("💀 ПОРАЖЕНИЕ на %d дне\n", p.ThisDay-1)
+	}
+
+	fmt.Printf("❤️ Здоровье: %d%%\n", p.Health)
+	fmt.Printf("🍗 Еда: %d / %d\n", p.Eat, player.MaxResourceLimit)
+	fmt.Printf("💧 Вода: %d / %d\n", p.Water, player.MaxResourceLimit)
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+	fmt.Println("\n📌 Нажмите Enter для выхода...")
+	fmt.Scanln()
 }
