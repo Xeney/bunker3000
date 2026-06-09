@@ -4,9 +4,14 @@ import (
 	"bunker3000/events"
 	"bunker3000/player"
 	"fmt"
+	"math/rand"
+	"time"
 )
 
 func main() {
+	// Инициализация генератора случайных чисел
+	rand.Seed(time.Now().UnixNano())
+
 	p := player.CreatePlayer()
 	eventPool := events.ConstructEventsPool()
 
@@ -14,7 +19,6 @@ func main() {
 	p.PrintStatus()
 
 	for !p.Lock {
-
 		err := p.StartNewDay()
 		if err != nil {
 			fmt.Printf("\n💀 Игра окончена: %s\n", err.Error())

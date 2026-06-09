@@ -125,3 +125,15 @@ func (p *Player) ChangeHealth(amount int8) error {
 
 	return nil
 }
+
+func (p *Player) RandomResource(amount int8, resourceType string) {
+	switch resourceType {
+	case "food":
+		p.AddEat(amount)
+	case "water":
+		p.AddWater(amount)
+	case "both":
+		p.AddEat(amount)
+		p.AddWater(amount)
+	}
+}
