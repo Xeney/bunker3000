@@ -120,7 +120,7 @@ func ShowClassSelect(w fyne.Window, diff player.Difficulty) {
 	})
 	startBtn.Importance = widget.HighImportance
 
-	nav := container.NewBorder(nil, nil, backBtn, startBtn)
+	nav := container.NewBorder(nil, nil, backBtn, startBtn, nil)
 
 	content := container.NewBorder(
 		container.NewPadded(title),

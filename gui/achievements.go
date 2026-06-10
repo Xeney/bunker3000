@@ -15,9 +15,9 @@ func ShowAchievements(w fyne.Window) {
 
 	ach := achievements.NewTracker()
 
-	sd, err := save.Load()
+	saved, err := save.LoadAchievements()
 	if err == nil {
-		for _, sa := range sd.Achievements {
+		for _, sa := range saved {
 			for _, a := range ach.Achievements {
 				if a.ID == sa.ID && sa.Unlocked {
 					a.Unlocked = true

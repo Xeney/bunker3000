@@ -104,7 +104,7 @@ func ShowDifficulty(w fyne.Window) {
 	})
 	nextBtn.Importance = widget.HighImportance
 
-	nav := container.NewBorder(nil, nil, backBtn, nextBtn, container.NewCenter(nextBtn))
+	nav := container.NewBorder(nil, nil, backBtn, nextBtn)
 
 	content := container.NewBorder(
 		container.NewPadded(title),

@@ -7,7 +7,10 @@ import (
 	"path/filepath"
 )
 
-const SaveFileName = "bunker3000_save.json"
+const (
+	SaveFileName          = "bunker3000_save.json"
+	AchievementsFileName  = "bunker3000_achievements.json"
+)
 
 type SaveData struct {
 	Player        player.Player `json:"player"`
@@ -107,4 +110,29 @@ func DeleteSave() error {
 		return err
 	}
 	return nil
+}
+
+func SaveAchievements(achieves []SaveAchieve) error {
+	data := struct {
+		Achievements []SaveAchieve `json:"achievements"`
+	}{Achievements: achieves}
+	bytes, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(AchievementsFileName, bytes, 0644)
+}
+
+func LoadAchievements() ([]SaveAchieve, error) {
+	bytes, err := os.ReadFile(AchievementsFileName)
+	if err != nil {
+		return nil, err
+	}
+	var data struct {
+		Achievements []SaveAchieve `json:"achievements"`
+	}
+	if err := json.Unmarshal(bytes, &data); err != nil {
+		return nil, err
+	}
+	return data.Achievements, nil
 }

@@ -152,16 +152,45 @@ func (gs *GameState) IsGameOver() bool {
 }
 
 func (gs *GameState) Save() error {
+	// Load old achievements for persistence between runs
+	oldAchieves, _ := save.LoadAchievements()
+
+	// Merge: keep any previously unlocked achievement
+	unlocked := make(map[string]bool)
+	for _, sa := range oldAchieves {
+		if sa.Unlocked {
+			unlocked[sa.ID] = true
+		}
+	}
+	for _, a := range gs.Achievements.Achievements {
+		if a.Unlocked {
+			unlocked[a.ID] = true
+		}
+	}
+
+	// Build merged save list
 	saveAchieves := make([]struct {
 		ID       string
 		Unlocked bool
 	}, len(gs.Achievements.Achievements))
+	persistAchieves := make([]save.SaveAchieve, len(gs.Achievements.Achievements))
 	for i, a := range gs.Achievements.Achievements {
+		state := unlocked[a.ID]
 		saveAchieves[i] = struct {
 			ID       string
 			Unlocked bool
-		}{ID: a.ID, Unlocked: a.Unlocked}
+		}{ID: a.ID, Unlocked: state}
+		persistAchieves[i] = save.SaveAchieve{
+			ID:       a.ID,
+			Unlocked: state,
+			TotalDmg: gs.TotalDamage,
+		}
 	}
+
+	// Persist achievements separately (never deleted)
+	save.SaveAchievements(persistAchieves)
+
+	// Save game state
 	return save.Save(gs.Player, saveAchieves, gs.TotalDamage, gs.Endless, gs.StoryBlocks, gs.ActiveChainID, gs.ChainStep)
 }
 
