@@ -29,9 +29,6 @@ go.work
 bunker3000_save.json
 bunker3000_achievements.json
 
-# Build script
-build.bat
-
 # OS files
 Thumbs.db
 desktop.ini

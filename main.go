@@ -1,22 +1,19 @@
 package main
 
 import (
-	"bunker3000/gui"
+	"bunker3000/tui"
+	"fmt"
+	"os"
 
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
-	a := app.New()
-	a.Settings().SetTheme(gui.NewTheme())
+	m := tui.NewModel()
+	p := tea.NewProgram(m, tea.WithAltScreen())
 
-	w := a.NewWindow("Бункер-3000")
-	w.Resize(fyne.NewSize(800, 600))
-	w.SetMaster()
-	w.CenterOnScreen()
-
-	gui.ShowMainMenu(w)
-
-	w.ShowAndRun()
+	if _, err := p.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Ошибка: %v\n", err)
+		os.Exit(1)
+	}
 }
