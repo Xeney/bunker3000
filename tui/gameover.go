@@ -73,8 +73,6 @@ func (m *model) viewGameOver() string {
 	}
 
 	body := lipgloss.JoinVertical(lipgloss.Left,
-		TitleStyle.Render(titleStr),
-		"",
 		LabelStyle.Render("Статистика:"),
 		ValueStyle.Render(stats),
 		"",

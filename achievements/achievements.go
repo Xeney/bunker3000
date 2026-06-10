@@ -31,6 +31,10 @@ func NewTracker() *Tracker {
 			{ID: "medic", Name: "ВРАЧЕВАТЕЛЬ", Desc: "Победить в роли Медика"},
 			{ID: "scout", Name: "СЛЕДОПЫТ", Desc: "Победить в роли Разведчика"},
 			{ID: "brawler", Name: "ГЛАДИАТОР", Desc: "Победить в роли Бойца"},
+			{ID: "hauler", Name: "ТЯЖЕЛОВОЗ", Desc: "Победить в роли Грузчика"},
+			{ID: "mechanic", Name: "РЕМОНТНИК", Desc: "Победить в роли Механика"},
+			{ID: "trader", Name: "БАРЫГА", Desc: "Победить в роли Торговца"},
+			{ID: "maxlevel", Name: "МАКСИМАЛИСТ", Desc: "Достичь 10-го уровня"},
 		},
 	}
 }
@@ -84,6 +88,22 @@ func (t *Tracker) Check(p *player.Player) {
 			}
 		case "brawler":
 			if p.Health > 0 && p.Lock && p.Class == player.ClassBrawler {
+				a.Unlocked = true
+			}
+		case "hauler":
+			if p.Health > 0 && p.Lock && p.Class == player.ClassHauler {
+				a.Unlocked = true
+			}
+		case "mechanic":
+			if p.Health > 0 && p.Lock && p.Class == player.ClassMechanic {
+				a.Unlocked = true
+			}
+		case "trader":
+			if p.Health > 0 && p.Lock && p.Class == player.ClassTrader {
+				a.Unlocked = true
+			}
+		case "maxlevel":
+			if p.Level >= 10 {
 				a.Unlocked = true
 			}
 		}

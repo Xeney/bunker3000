@@ -37,6 +37,7 @@ func menuItems(m *model) []menuItem {
 		{label: "Новая игра", action: func(m *model) tea.Cmd {
 			m.screen = screenDifficulty
 			m.diffChoice = 1
+			m.scrollOffset = 0
 			return nil
 		}},
 		{label: "Загрузить", action: func(m *model) tea.Cmd {
@@ -54,10 +55,19 @@ func menuItems(m *model) []menuItem {
 			m.gs.StartDay()
 			m.screen = screenGame
 			m.gamePhase = phaseEvent
+			m.scrollOffset = 0
 			return nil
 		}},
 		{label: "Достижения", action: func(m *model) tea.Cmd {
 			m.screen = screenAchievements
+			m.achieveChoice = 0
+			m.scrollOffset = 0
+			return nil
+		}},
+		{label: "Руководство", action: func(m *model) tea.Cmd {
+			m.screen = screenGuide
+			m.achieveChoice = 0
+			m.scrollOffset = 0
 			return nil
 		}},
 		{label: "Выход", action: func(m *model) tea.Cmd {
@@ -70,7 +80,7 @@ func menuItems(m *model) []menuItem {
 func (m *model) viewMenu() string {
 	title := " БУНКЕР-3000 "
 	subtitle := "Симулятор выживания в пустоши"
-	ver := "Версия 2.0.0"
+	ver := "Версия 2.5.0"
 
 	var lines []string
 	items := menuItems(m)

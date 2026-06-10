@@ -73,7 +73,21 @@ func GenerateEpilogue(gs *GameState) string {
 	b.WriteString(fmt.Sprintf("Максимальный уровень здоровья: %d%%.\n", player.MaxHealth(p.Class)))
 	b.WriteString(fmt.Sprintf("Минимальный: вы были на волосок от смерти.\n"))
 
-	// 4. Ending
+	// Karma block
+	switch {
+	case p.Karma >= 50:
+		b.WriteString("\nВаша карма сияет чистотой. Вы были светом в этом тёмном мире.\n")
+	case p.Karma >= 20:
+		b.WriteString("\nВаша карма склоняется к добру. Вы старались помогать другим.\n")
+	case p.Karma >= -20:
+		b.WriteString("\nВаша карма в равновесии. Вы просто выживали, как могли.\n")
+	case p.Karma >= -50:
+		b.WriteString("\nВаша карма омрачена. Пустоши сделали вас жестоким.\n")
+	default:
+		b.WriteString("\nВаша карма чернее бездны. Вы сеяли смерть и хаос.\n")
+	}
+
+	// 5. Ending
 	b.WriteString(fmt.Sprintf("\n%s на сложности «%s» — ", p.Class.String(), p.Difficulty.String()))
 	if p.Health > 0 {
 		b.WriteString("достойная история выживания в мире, где выживают единицы.")

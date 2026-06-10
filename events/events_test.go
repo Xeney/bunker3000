@@ -175,7 +175,7 @@ func TestEvent_AddWaterEvent(t *testing.T) {
 	initialWater := p.Water
 
 	for _, event := range pool {
-		if event.Message == "[РУЧЕЙ] Вы нашли чистый ручей среди скал." {
+		if event.Message == "[РУЧЕЙ] Среди серых скал вы слышите журчание воды. Небольшой ручей с кристально чистой водой пробивается сквозь расщелину." {
 			resultMessage, err := event.Execute(1, &p)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
@@ -198,7 +198,7 @@ func TestEvent_AttackEvent(t *testing.T) {
 	p.Health = 80
 
 	for _, event := range pool {
-		if event.Message == "[НАПАДЕНИЕ] На вас напал бродяга с ножом!" {
+		if event.Message == "[НАПАДЕНИЕ] Из-за ржавого остова грузовика выскакивает человек в грязной одежде. В его руке сверкает заточенный нож, глаза горят безумной решимостью." {
 			resultMessage, err := event.Execute(1, &p)
 			if err != nil && p.Health > 0 {
 				if p.Health > 0 {
@@ -241,7 +241,7 @@ func TestAllEvents_NoPanic(t *testing.T) {
 
 func TestEventsCount(t *testing.T) {
 	pool := ConstructEventsPool()
-	expectedCount := 32
+	expectedCount := 238
 
 	if len(pool) != expectedCount {
 		t.Errorf("Expected %d events, got %d", expectedCount, len(pool))

@@ -21,8 +21,8 @@ var difficulties = []diffEntry{
 		"Сбалансированный режим. Требует внимания к ресурсам."},
 	{player.DifficultyHard, "Сложная", "5 дней, жёсткий вызов",
 		"Ресурсов в обрез, каждый день на счету. Для опытных игроков."},
-	{player.DifficultyEndless, "Бесконечный", "∞ дней, растущая сложность",
-		"Продержитесь максимально долго! Расход ресурсов растёт каждые 5 дней."},
+	{player.DifficultyEndless, "Бесконечный", "∞ дней, фиксированный расход",
+		"Фиксированный расход ресурсов. Продержитесь максимально долго!"},
 }
 
 func (m *model) updateDifficulty(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -39,18 +39,17 @@ func (m *model) updateDifficulty(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.diff = difficulties[m.diffChoice].diff
 		m.screen = screenClassSelect
 		m.classChoice = 0
+		m.scrollOffset = 0
 	case "esc":
 		m.screen = screenMenu
 		m.menuChoice = 0
+		m.scrollOffset = 0
 	}
 	return m, nil
 }
 
 func (m *model) viewDifficulty() string {
 	var lines []string
-	lines = append(lines, TitleStyle.Render("ВЫБОР СЛОЖНОСТИ"))
-	lines = append(lines, "")
-
 	for i, d := range difficulties {
 		if i == m.diffChoice {
 			lines = append(lines, SelectedStyle.Render("> "+d.name+" <")+"  "+

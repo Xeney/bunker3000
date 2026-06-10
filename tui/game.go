@@ -11,6 +11,17 @@ import (
 )
 
 func (m *model) updateGame(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "up", "k":
+		if m.scrollOffset > 0 {
+			m.scrollOffset--
+		}
+		return m, nil
+	case "down", "j":
+		m.scrollOffset++
+		return m, nil
+	}
+
 	switch m.gamePhase {
 	case phaseEvent:
 		switch msg.String() {
@@ -24,6 +35,7 @@ func (m *model) updateGame(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.gamePhase = phaseResult
+			m.scrollOffset = 0
 		case "2":
 			r, _ := m.gs.ExecuteChoice(2)
 			m.resultMsg = r
@@ -34,6 +46,7 @@ func (m *model) updateGame(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.gamePhase = phaseResult
+			m.scrollOffset = 0
 		}
 
 	case phaseResult:
@@ -48,6 +61,7 @@ func (m *model) updateGame(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.gamePhase = phaseEvent
+			m.scrollOffset = 0
 		}
 	}
 
@@ -70,14 +84,21 @@ func (m *model) viewGame() string {
 	eatPct := float64(p.Eat) / float64(cfg.MaxResource)
 	waterPct := float64(p.Water) / float64(cfg.MaxResource)
 
+	nextXP := player.XPForLevel(p.Level + 1)
+	xpPct := float64(p.XP) / float64(nextXP)
+	if xpPct > 1 {
+		xpPct = 1
+	}
+
 	status := lipgloss.JoinVertical(lipgloss.Left,
 		lipgloss.JoinHorizontal(lipgloss.Center,
 			LabelStyle.Render(" День: "),
 			ValueStyle.Render(dayStr),
 		),
 		LabelStyle.Render(" Здоровье: ")+ProgressBar(healthPct, 20)+fmt.Sprintf(" %d%%", p.Health),
-		LabelStyle.Render(" Еда:      ")+ProgressBar(eatPct, 20)+fmt.Sprintf(" %d/%d", p.Eat, cfg.MaxResource),
-		LabelStyle.Render(" Вода:     ")+ProgressBar(waterPct, 20)+fmt.Sprintf(" %d/%d", p.Water, cfg.MaxResource),
+		LabelStyle.Render(" Еда:      ")+ProgressBar(eatPct, 20)+fmt.Sprintf(" %d/%d", p.Eat, p.GetMaxResource()),
+		LabelStyle.Render(" Вода:     ")+ProgressBar(waterPct, 20)+fmt.Sprintf(" %d/%d", p.Water, p.GetMaxResource()),
+		LabelStyle.Render(" Уровень:  ")+LevelStyle.Render(fmt.Sprintf("%d", p.Level))+" "+ProgressBar(xpPct, 12)+fmt.Sprintf(" %d/%d XP", p.XP, nextXP),
 		DimStyle.Render(fmt.Sprintf(" %s · %s", p.Difficulty.String(), p.Class.String())),
 	)
 
@@ -97,15 +118,16 @@ func (m *model) viewGame() string {
 		}
 
 		catLabel := eventCategoryLabel(ev.Category)
+		evStyle := eventCategoryStyle(ev.Category)
 
 		eventBlock := lipgloss.JoinVertical(lipgloss.Left,
 			"",
-			LabelStyle.Render(" ["+catLabel+"]"),
+			evStyle.Render(" ── "+catLabel+" ── "),
 			"",
-			ValueStyle.Render(" "+ev.Message),
+			evStyle.Render(" "+ev.Message),
 			"",
-			ValueStyle.Render(" 1. "+ev.Variants[0]),
-			ValueStyle.Render(" 2. "+ev.Variants[1]),
+			Variant1Style.Render(" 1. "+ev.Variants[0]),
+			Variant2Style.Render(" 2. "+ev.Variants[1]),
 			"",
 			HelpStyle.Render("1/2 — сделать выбор · Esc — выйти"),
 		)
@@ -119,14 +141,27 @@ func (m *model) viewGame() string {
 
 	case phaseResult:
 		isGood := isGoodResultTUI(m.resultMsg)
-		resultStyle := ResultGoodStyle
+		catStyle := ResultGoodStyle
 		if !isGood {
-			resultStyle = ResultBadStyle
+			catStyle = ResultBadStyle
+		}
+		if m.gs.CurrentEvent != nil {
+			catStyle = eventCategoryStyle(m.gs.CurrentEvent.Category)
+		}
+
+		var extra []string
+		if m.gs.LeveledUp {
+			extra = append(extra, "",
+				LevelStyle.Render(" ╔══════════════════════════════╗"),
+				LevelStyle.Render(" ║        УРОВЕНЬ ПОВЫШЕН!      ║"),
+				LevelStyle.Render(fmt.Sprintf(" ║  Макс. ресурсы +%d, HP +%d    ║", m.gs.Player.Level, m.gs.Player.Level*5)),
+				LevelStyle.Render(" ╚══════════════════════════════╝"),
+				"")
 		}
 
 		resultBlock := lipgloss.JoinVertical(lipgloss.Left,
 			"",
-			resultStyle.Render(m.resultMsg),
+			catStyle.Render(m.resultMsg),
 			"",
 			HelpStyle.Render("Enter — продолжить · Esc — выйти"),
 		)
@@ -134,6 +169,7 @@ func (m *model) viewGame() string {
 		return RenderInBox("БУНКЕР-3000",
 			lipgloss.JoinVertical(lipgloss.Left,
 				status,
+				lipgloss.JoinVertical(lipgloss.Left, extra...),
 				resultBlock,
 			),
 		)
@@ -158,6 +194,25 @@ func eventCategoryLabel(cat string) string {
 		return "НАХОДКА"
 	default:
 		return "СОБЫТИЕ"
+	}
+}
+
+func eventCategoryStyle(cat string) lipgloss.Style {
+	switch cat {
+	case "resource":
+		return EventResourceStyle
+	case "combat":
+		return EventCombatStyle
+	case "helper":
+		return EventHelperStyle
+	case "weather":
+		return EventWeatherStyle
+	case "hazard":
+		return EventHazardStyle
+	case "find":
+		return EventFindStyle
+	default:
+		return EventDefaultStyle
 	}
 }
 

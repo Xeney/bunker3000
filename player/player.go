@@ -35,6 +35,9 @@ const (
 	ClassMedic    ClassType = 1
 	ClassScout    ClassType = 2
 	ClassBrawler  ClassType = 3
+	ClassHauler   ClassType = 4
+	ClassMechanic ClassType = 5
+	ClassTrader   ClassType = 6
 )
 
 func (c ClassType) String() string {
@@ -47,6 +50,12 @@ func (c ClassType) String() string {
 		return "Разведчик"
 	case ClassBrawler:
 		return "Боец"
+	case ClassHauler:
+		return "Грузчик"
+	case ClassMechanic:
+		return "Механик"
+	case ClassTrader:
+		return "Торговец"
 	}
 	return "Неизвестно"
 }
@@ -61,6 +70,12 @@ func (c ClassType) Description() string {
 		return "Двойная добыча ресурсов"
 	case ClassBrawler:
 		return "Половина урона от всех источников"
+	case ClassHauler:
+		return "+6 к вместимости, +2 стартовых ресурса"
+	case ClassMechanic:
+		return "+15 HP, −25% урона отовсюду"
+	case ClassTrader:
+		return "+2 еды/воды из событий помощи"
 	}
 	return ""
 }
@@ -132,26 +147,88 @@ type Player struct {
 	Lock       bool
 	Difficulty Difficulty
 	Class      ClassType
+	Karma      int8
+	XP         int
+	Level      int8
 	Flags      map[string]bool
+}
+
+var xpThresholds = []int{0, 20, 50, 90, 140, 200, 270, 350, 440, 540, 650}
+
+func XPForLevel(level int8) int {
+	idx := int(level)
+	if idx >= len(xpThresholds) {
+		return 650
+	}
+	return xpThresholds[idx]
 }
 
 func CreatePlayer(diff Difficulty, class ClassType) Player {
 	cfg := DifficultyConfigs[diff]
 	health := int8(100)
-	if class == ClassMedic {
+	switch class {
+	case ClassMedic:
 		health = 120
+	case ClassMechanic:
+		health = 115
+	}
+
+	eat := cfg.StartEat
+	water := cfg.StartWater
+	if class == ClassHauler {
+		eat += 2
+		water += 2
 	}
 
 	return Player{
 		Health:     health,
-		Eat:        cfg.StartEat,
-		Water:      cfg.StartWater,
+		Eat:        eat,
+		Water:      water,
 		ThisDay:    1,
 		Lock:       false,
 		Difficulty: diff,
 		Class:      class,
+		Karma:      0,
+		XP:         0,
+		Level:      0,
 		Flags:      make(map[string]bool),
 	}
+}
+
+func (p *Player) AddKarma(delta int8) {
+	p.Karma += delta
+	if p.Karma > 100 {
+		p.Karma = 100
+	}
+	if p.Karma < -100 {
+		p.Karma = -100
+	}
+}
+
+func (p *Player) AddXP(amount int) bool {
+	p.XP += amount
+	if p.XP < 0 {
+		p.XP = 0
+	}
+	nextLevel := int(p.Level) + 1
+	if nextLevel < len(xpThresholds) && p.XP >= xpThresholds[nextLevel] {
+		p.Level++
+		return true
+	}
+	return false
+}
+
+func (p *Player) GetMaxHP() int8 {
+	base := MaxHealth(p.Class)
+	return base + p.Level*5
+}
+
+func (p *Player) GetMaxResource() int8 {
+	base := p.GetCfg().MaxResource
+	if p.Class == ClassHauler {
+		base += 6
+	}
+	return base + p.Level
 }
 
 func (p *Player) GetCfg() DifficultyConfig {
@@ -181,20 +258,6 @@ func (p *Player) StartNewDay() error {
 		starvationDmg = cfg.StarvationDmg
 		dehydrationDmg = cfg.DehydrationDmg
 	)
-
-	if cfg.MaxDays < 0 {
-		every5 := p.ThisDay / 5
-		if every5 > 0 {
-			add := int8(every5)
-			if add > 5 {
-				add = 5
-			}
-			consumeFood += add
-			consumeWater += add
-			starvationDmg += add * 5
-			dehydrationDmg += add * 5
-		}
-	}
 
 	var damage int8 = 0
 
@@ -240,9 +303,9 @@ func (p *Player) AddEat(amount int8) {
 		amount *= 2
 	}
 	p.Eat += amount
-	cfg := p.GetCfg()
-	if p.Eat > cfg.MaxResource {
-		p.Eat = cfg.MaxResource
+	maxRes := p.GetMaxResource()
+	if p.Eat > maxRes {
+		p.Eat = maxRes
 	}
 	if p.Eat < 0 {
 		p.Eat = 0
@@ -254,9 +317,9 @@ func (p *Player) AddWater(amount int8) {
 		amount *= 2
 	}
 	p.Water += amount
-	cfg := p.GetCfg()
-	if p.Water > cfg.MaxResource {
-		p.Water = cfg.MaxResource
+	maxRes := p.GetMaxResource()
+	if p.Water > maxRes {
+		p.Water = maxRes
 	}
 	if p.Water < 0 {
 		p.Water = 0
@@ -269,8 +332,8 @@ func (p *Player) PrintStatus() {
 	fmt.Println("|         ТЕКУЩИЙ СТАТУС ИГРОКА            |")
 	fmt.Println("+------------------------------------------+")
 	fmt.Printf("| Здоровье: %d%%\n", p.Health)
-	fmt.Printf("| Еда:      %d / %d\n", p.Eat, cfg.MaxResource)
-	fmt.Printf("| Вода:     %d / %d\n", p.Water, cfg.MaxResource)
+	fmt.Printf("| Еда:      %d / %d\n", p.Eat, p.GetMaxResource())
+	fmt.Printf("| Вода:     %d / %d\n", p.Water, p.GetMaxResource())
 	if cfg.MaxDays < 0 {
 		fmt.Printf("| День:     %d (∞)\n", p.ThisDay)
 	} else {
@@ -278,6 +341,7 @@ func (p *Player) PrintStatus() {
 	}
 	fmt.Printf("| Сложность: %s\n", p.Difficulty.String())
 	fmt.Printf("| Класс:     %s\n", p.Class.String())
+	fmt.Printf("| Уровень:   %d (XP: %d)\n", p.Level, p.XP)
 	fmt.Println("+------------------------------------------+")
 }
 
@@ -288,11 +352,14 @@ func (p *Player) ChangeHealth(amount int8) error {
 
 	if amount < 0 {
 		damage := -amount
-		if p.Class == ClassBrawler {
+		switch p.Class {
+		case ClassBrawler:
 			damage = damage / 2
-			if damage < 1 {
-				damage = 1
-			}
+		case ClassMechanic:
+			damage = damage * 3 / 4
+		}
+		if damage < 1 {
+			damage = 1
 		}
 		if p.Health <= damage {
 			p.Health = 0
@@ -304,8 +371,9 @@ func (p *Player) ChangeHealth(amount int8) error {
 		if p.Class == ClassMedic {
 			amount *= 2
 		}
-		if int(p.Health)+int(amount) > int(MaxHealth(p.Class)) {
-			p.Health = MaxHealth(p.Class)
+		maxHP := p.GetMaxHP()
+		if int(p.Health)+int(amount) > int(maxHP) {
+			p.Health = maxHP
 		} else {
 			p.Health += amount
 		}
@@ -315,10 +383,14 @@ func (p *Player) ChangeHealth(amount int8) error {
 }
 
 func MaxHealth(class ClassType) int8 {
-	if class == ClassMedic {
+	switch class {
+	case ClassMedic:
 		return 120
+	case ClassMechanic:
+		return 115
+	default:
+		return 100
 	}
-	return 100
 }
 
 func (p *Player) PrintDeathMessage() {

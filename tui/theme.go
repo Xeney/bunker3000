@@ -3,11 +3,17 @@ package tui
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	Green   = lipgloss.Color("10")
-	DarkGray  = lipgloss.Color("8")
-	LightGray = lipgloss.Color("7")
-	White     = lipgloss.Color("15")
-	Black     = lipgloss.Color("0")
+	Green      = lipgloss.Color("10")
+	DarkGray   = lipgloss.Color("8")
+	LightGray  = lipgloss.Color("7")
+	White      = lipgloss.Color("15")
+	Black      = lipgloss.Color("0")
+	Red        = lipgloss.Color("9")
+	Blue       = lipgloss.Color("12")
+	Yellow     = lipgloss.Color("11")
+	Purple     = lipgloss.Color("13")
+	Cyan       = lipgloss.Color("14")
+	Orange     = lipgloss.Color("214")
 
 	BoxStyle = lipgloss.NewStyle().
 		Border(lipgloss.DoubleBorder()).
@@ -51,7 +57,7 @@ var (
 			Bold(true)
 
 	ResultBadStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("9")).
+			Foreground(Red).
 			Bold(true)
 
 	ProgressBg = lipgloss.NewStyle().
@@ -59,6 +65,20 @@ var (
 
 	ProgressFg = lipgloss.NewStyle().
 			Foreground(Green)
+
+	EventResourceStyle = lipgloss.NewStyle().Foreground(Green).Bold(true)
+	EventCombatStyle   = lipgloss.NewStyle().Foreground(Red).Bold(true)
+	EventHelperStyle   = lipgloss.NewStyle().Foreground(Blue).Bold(true)
+	EventWeatherStyle  = lipgloss.NewStyle().Foreground(Cyan).Bold(true)
+	EventHazardStyle   = lipgloss.NewStyle().Foreground(Orange).Bold(true)
+	EventFindStyle     = lipgloss.NewStyle().Foreground(Purple).Bold(true)
+	EventDefaultStyle  = lipgloss.NewStyle().Foreground(White).Bold(true)
+
+	Variant1Style = lipgloss.NewStyle().Foreground(Green)
+	Variant2Style = lipgloss.NewStyle().Foreground(Orange)
+
+	LevelStyle = lipgloss.NewStyle().Foreground(Orange).Bold(true)
+	XPBarStyle = lipgloss.NewStyle().Foreground(Green)
 )
 
 func ProgressBar(pct float64, width int) string {

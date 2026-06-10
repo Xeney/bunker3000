@@ -24,6 +24,12 @@ var classes = []classEntry{
 		"Двойная добыча еды и воды из событий."},
 	{player.ClassBrawler, "Боец", "50% урона",
 		"Получает вдвое меньше урона от всех источников."},
+	{player.ClassHauler, "Грузчик", "+6 ресурсов, +2 старт",
+		"Носит больше припасов. Стартует с +2 еды и воды."},
+	{player.ClassMechanic, "Механик", "+15 HP, −25% урона",
+		"Повышенная живучесть и снижение всего входящего урона на 25%."},
+	{player.ClassTrader, "Торговец", "+2 из helper",
+		"Получает +2 еды и +2 воды из событий помощи и торговли."},
 }
 
 func (m *model) updateClassSelect(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -41,18 +47,17 @@ func (m *model) updateClassSelect(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.gs.StartDay()
 		m.screen = screenGame
 		m.gamePhase = phaseEvent
+		m.scrollOffset = 0
 		return m, nil
 	case "esc":
 		m.screen = screenDifficulty
+		m.scrollOffset = 0
 	}
 	return m, nil
 }
 
 func (m *model) viewClassSelect() string {
 	var lines []string
-	lines = append(lines, TitleStyle.Render("ВЫБОР КЛАССА"))
-	lines = append(lines, "")
-
 	for i, c := range classes {
 		if i == m.classChoice {
 			lines = append(lines, SelectedStyle.Render("> "+c.name+" <"))
