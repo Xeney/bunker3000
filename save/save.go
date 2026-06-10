@@ -10,8 +10,13 @@ import (
 const SaveFileName = "bunker3000_save.json"
 
 type SaveData struct {
-	Player       player.Player `json:"player"`
-	Achievements []SaveAchieve `json:"achievements"`
+	Player        player.Player `json:"player"`
+	Achievements  []SaveAchieve `json:"achievements"`
+	TotalDamage   int8          `json:"total_damage"`
+	Endless       bool          `json:"endless"`
+	StoryBlocks   []string      `json:"story_blocks,omitempty"`
+	ActiveChainID string        `json:"active_chain,omitempty"`
+	ChainStep     int           `json:"chain_step"`
 }
 
 type SaveAchieve struct {
@@ -23,9 +28,14 @@ type SaveAchieve struct {
 func Save(p player.Player, achieves []struct {
 	ID       string
 	Unlocked bool
-}, totalDmg int8) error {
+}, totalDmg int8, endless bool, storyBlocks []string, activeChainID string, chainStep int) error {
 	data := SaveData{
-		Player: p,
+		Player:        p,
+		TotalDamage:   totalDmg,
+		Endless:       endless,
+		StoryBlocks:   storyBlocks,
+		ActiveChainID: activeChainID,
+		ChainStep:     chainStep,
 	}
 	for _, a := range achieves {
 		data.Achievements = append(data.Achievements, SaveAchieve{

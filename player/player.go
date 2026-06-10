@@ -8,9 +8,10 @@ import (
 type Difficulty int8
 
 const (
-	DifficultyEasy   Difficulty = 0
-	DifficultyNormal Difficulty = 1
-	DifficultyHard   Difficulty = 2
+	DifficultyEasy     Difficulty = 0
+	DifficultyNormal   Difficulty = 1
+	DifficultyHard     Difficulty = 2
+	DifficultyEndless  Difficulty = 3
 )
 
 func (d Difficulty) String() string {
@@ -21,6 +22,8 @@ func (d Difficulty) String() string {
 		return "Обычная"
 	case DifficultyHard:
 		return "Сложная"
+	case DifficultyEndless:
+		return "Бесконечный"
 	}
 	return "Неизвестно"
 }
@@ -108,6 +111,17 @@ var DifficultyConfigs = map[Difficulty]DifficultyConfig{
 		StarvationDmg:  30,
 		DehydrationDmg: 30,
 	},
+	DifficultyEndless: {
+		Name:           "Бесконечный",
+		MaxDays:        -1,
+		ConsumeFood:    2,
+		ConsumeWater:   2,
+		StartEat:       12,
+		StartWater:     12,
+		MaxResource:    20,
+		StarvationDmg:  15,
+		DehydrationDmg: 15,
+	},
 }
 
 type Player struct {
@@ -118,6 +132,7 @@ type Player struct {
 	Lock       bool
 	Difficulty Difficulty
 	Class      ClassType
+	Flags      map[string]bool
 }
 
 func CreatePlayer(diff Difficulty, class ClassType) Player {
@@ -135,6 +150,7 @@ func CreatePlayer(diff Difficulty, class ClassType) Player {
 		Lock:       false,
 		Difficulty: diff,
 		Class:      class,
+		Flags:      make(map[string]bool),
 	}
 }
 
@@ -149,28 +165,55 @@ func (p *Player) StartNewDay() error {
 
 	cfg := p.GetCfg()
 
-	fmt.Printf("========================================\n")
-	fmt.Printf("          ДЕНЬ %d ИЗ %d\n", p.ThisDay, cfg.MaxDays)
-	fmt.Printf("========================================\n")
+	if cfg.MaxDays < 0 {
+		fmt.Printf("========================================\n")
+		fmt.Printf("          ДЕНЬ %d\n", p.ThisDay)
+		fmt.Printf("========================================\n")
+	} else {
+		fmt.Printf("========================================\n")
+		fmt.Printf("          ДЕНЬ %d ИЗ %d\n", p.ThisDay, cfg.MaxDays)
+		fmt.Printf("========================================\n")
+	}
+
+	var (
+		consumeFood = cfg.ConsumeFood
+		consumeWater = cfg.ConsumeWater
+		starvationDmg = cfg.StarvationDmg
+		dehydrationDmg = cfg.DehydrationDmg
+	)
+
+	if cfg.MaxDays < 0 {
+		every5 := p.ThisDay / 5
+		if every5 > 0 {
+			add := int8(every5)
+			if add > 5 {
+				add = 5
+			}
+			consumeFood += add
+			consumeWater += add
+			starvationDmg += add * 5
+			dehydrationDmg += add * 5
+		}
+	}
 
 	var damage int8 = 0
 
-	if p.Eat >= cfg.ConsumeFood {
-		p.Eat -= cfg.ConsumeFood
-		fmt.Printf("[-] Еда: -%d (осталось: %d)\n", cfg.ConsumeFood, p.Eat)
+	if p.Eat >= consumeFood {
+		p.Eat -= consumeFood
+		fmt.Printf("[-] Еда: -%d (осталось: %d)\n", consumeFood, p.Eat)
 	} else {
 		p.Eat = 0
 		fmt.Println("[!] НЕТ ЕДЫ! Здоровье уменьшается.")
-		damage += cfg.StarvationDmg
+		damage += starvationDmg
 	}
 
-	if p.Water >= cfg.ConsumeWater {
-		p.Water -= cfg.ConsumeWater
-		fmt.Printf("[-] Вода: -%d (осталось: %d)\n", cfg.ConsumeWater, p.Water)
+	if p.Water >= consumeWater {
+		p.Water -= consumeWater
+		fmt.Printf("[-] Вода: -%d (осталось: %d)\n", consumeWater, p.Water)
 	} else {
 		p.Water = 0
 		fmt.Println("[!] НЕТ ВОДЫ! Здоровье уменьшается.")
-		damage += cfg.DehydrationDmg
+		damage += dehydrationDmg
 	}
 
 	if damage > 0 {
@@ -183,7 +226,7 @@ func (p *Player) StartNewDay() error {
 		fmt.Printf("[-] Потеря здоровья от истощения: -%d%% (осталось: %d%%)\n", damage, p.Health)
 	}
 
-	if p.ThisDay >= cfg.MaxDays {
+	if cfg.MaxDays >= 0 && p.ThisDay >= cfg.MaxDays {
 		p.Lock = true
 		fmt.Println("\n=== ПОБЕДА! Вы успешно продержались все дни! ===")
 		return nil
@@ -228,7 +271,11 @@ func (p *Player) PrintStatus() {
 	fmt.Printf("| Здоровье: %d%%\n", p.Health)
 	fmt.Printf("| Еда:      %d / %d\n", p.Eat, cfg.MaxResource)
 	fmt.Printf("| Вода:     %d / %d\n", p.Water, cfg.MaxResource)
-	fmt.Printf("| День:     %d / %d\n", p.ThisDay, cfg.MaxDays)
+	if cfg.MaxDays < 0 {
+		fmt.Printf("| День:     %d (∞)\n", p.ThisDay)
+	} else {
+		fmt.Printf("| День:     %d / %d\n", p.ThisDay, cfg.MaxDays)
+	}
 	fmt.Printf("| Сложность: %s\n", p.Difficulty.String())
 	fmt.Printf("| Класс:     %s\n", p.Class.String())
 	fmt.Println("+------------------------------------------+")
@@ -290,5 +337,9 @@ func (p *Player) PrintDeathMessage() {
 	}
 
 	cfg := p.GetCfg()
-	fmt.Printf("| Дней продержался: %d / %d\n", p.ThisDay, cfg.MaxDays)
+	if cfg.MaxDays < 0 {
+		fmt.Printf("| Дней продержался: %d (∞)\n", p.ThisDay)
+	} else {
+		fmt.Printf("| Дней продержался: %d / %d\n", p.ThisDay, cfg.MaxDays)
+	}
 }

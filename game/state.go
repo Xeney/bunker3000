@@ -1,0 +1,189 @@
+package game
+
+import (
+	"bunker3000/achievements"
+	"bunker3000/events"
+	"bunker3000/player"
+	"bunker3000/save"
+	"errors"
+	"math/rand"
+	"time"
+)
+
+type GamePhase int
+
+const (
+	PhaseMenu GamePhase = iota
+	PhaseDifficulty
+	PhaseClass
+	PhasePlaying
+	PhaseResult
+	PhaseGameOver
+	PhaseAchievements
+)
+
+type GameState struct {
+	Player        player.Player
+	Achievements  *achievements.Tracker
+	EventPool     []events.Event
+	CurrentEvent  *events.Event
+	LastResult    string
+	Phase         GamePhase
+	TotalDamage   int8
+	DayMessage    string
+	DayError      error
+	Endless       bool
+	StoryBlocks   []string
+	ActiveChainID string
+	ChainStep     int
+}
+
+func NewGame(diff player.Difficulty, class player.ClassType) *GameState {
+	rand.Seed(time.Now().UnixNano())
+	p := player.CreatePlayer(diff, class)
+	eventPool := events.ConstructEventsPool()
+	ach := achievements.NewTracker()
+
+	return &GameState{
+		Player:       p,
+		Achievements: ach,
+		EventPool:    eventPool,
+		Phase:        PhasePlaying,
+		Endless:      diff == player.DifficultyEndless,
+	}
+}
+
+func (gs *GameState) StartDay() {
+	gs.DayError = nil
+	gs.DayMessage = ""
+	gs.CurrentEvent = nil
+	gs.LastResult = ""
+
+	err := gs.Player.StartNewDay()
+
+	if gs.Player.Lock && gs.Player.Health > 0 {
+		gs.DayMessage = "ПОБЕДА! Вы успешно продержались все дни!"
+		gs.Achievements.Check(&gs.Player)
+		return
+	}
+
+	if err != nil {
+		gs.DayError = err
+		return
+	}
+
+	// Active chain step
+	if gs.ActiveChainID != "" {
+		chain := findChain(gs.ActiveChainID)
+		if chain != nil && gs.ChainStep < len(chain.Steps) {
+			gs.CurrentEvent = &chain.Steps[gs.ChainStep]
+			return
+		}
+		gs.ActiveChainID = ""
+		gs.ChainStep = 0
+	}
+
+	// Check flag triggers for new chains
+	if gs.ActiveChainID == "" {
+		for i := range AllChains {
+			chain := &AllChains[i]
+			if gs.Player.Flags[chain.TriggerFlag] && !gs.Player.Flags[chain.ID+"_started"] {
+				activateChain(gs, chain.ID)
+				gs.CurrentEvent = &chain.Steps[0]
+				return
+			}
+		}
+	}
+
+	ev, err := events.GetRandomEvent(gs.EventPool)
+	if err != nil {
+		gs.DayError = err
+		return
+	}
+	gs.CurrentEvent = &ev
+}
+
+func (gs *GameState) ExecuteChoice(choice int) (string, error) {
+	if gs.CurrentEvent == nil {
+		return "", errors.New("нет активного события")
+	}
+
+	resultMessage, err := gs.CurrentEvent.Execute(choice, &gs.Player)
+	gs.LastResult = resultMessage
+
+	// Advance active chain
+	if gs.ActiveChainID != "" {
+		gs.ChainStep++
+		chain := findChain(gs.ActiveChainID)
+		if chain != nil && gs.ChainStep >= len(chain.Steps) {
+			if chain.FinalReward != nil {
+				rewardMsg := chain.FinalReward(&gs.Player)
+				resultMessage = rewardMsg + "\n" + resultMessage
+				gs.LastResult = resultMessage
+			}
+			gs.StoryBlocks = append(gs.StoryBlocks, gs.ActiveChainID)
+			gs.Player.Flags[gs.ActiveChainID+"_done"] = true
+			gs.ActiveChainID = ""
+			gs.ChainStep = 0
+		}
+	}
+
+	gs.Achievements.Check(&gs.Player)
+
+	if gs.Player.Lock {
+		gs.TotalDamage = 100 - gs.Player.Health
+		if gs.TotalDamage < 0 {
+			gs.TotalDamage = 0
+		}
+		gs.Achievements.RecordDamage(gs.TotalDamage)
+		gs.Achievements.Check(&gs.Player)
+	}
+
+	return resultMessage, err
+}
+
+func (gs *GameState) NextDay() {
+	gs.Player.ThisDay++
+	gs.Achievements.Check(&gs.Player)
+}
+
+func (gs *GameState) IsGameOver() bool {
+	return gs.Player.Lock
+}
+
+func (gs *GameState) Save() error {
+	saveAchieves := make([]struct {
+		ID       string
+		Unlocked bool
+	}, len(gs.Achievements.Achievements))
+	for i, a := range gs.Achievements.Achievements {
+		saveAchieves[i] = struct {
+			ID       string
+			Unlocked bool
+		}{ID: a.ID, Unlocked: a.Unlocked}
+	}
+	return save.Save(gs.Player, saveAchieves, gs.TotalDamage, gs.Endless, gs.StoryBlocks, gs.ActiveChainID, gs.ChainStep)
+}
+
+func LoadFromSave(saveData *save.SaveData) *GameState {
+	eventPool := events.ConstructEventsPool()
+	ach := achievements.NewTracker()
+	for _, sa := range saveData.Achievements {
+		for _, a := range ach.Achievements {
+			if a.ID == sa.ID && sa.Unlocked {
+				a.Unlocked = true
+			}
+		}
+	}
+	return &GameState{
+		Player:        saveData.Player,
+		Achievements:  ach,
+		EventPool:     eventPool,
+		Phase:         PhasePlaying,
+		TotalDamage:   saveData.TotalDamage,
+		Endless:       saveData.Endless,
+		StoryBlocks:   saveData.StoryBlocks,
+		ActiveChainID: saveData.ActiveChainID,
+		ChainStep:     saveData.ChainStep,
+	}
+}

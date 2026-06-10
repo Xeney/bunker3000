@@ -782,6 +782,142 @@ func ConstructEventsPool() []Event {
 	})
 	pool = append(pool, ev32)
 
+	// 33. Крик о помощи
+	ev33, _ := ConstructEvent(Event{
+		Message:  "[КРИК] Вы слышите крик о помощи из заброшенных руин.",
+		Variants: [2]string{"Пойти на крик и помочь", "Пройти мимо — это может быть ловушкой"},
+		Actions: [2]func(p *player.Player) string{
+			func(p *player.Player) string {
+				risk := rand.Intn(100)
+				if risk < 25 {
+					p.ChangeHealth(-10)
+					p.Flags["helped_cries"] = true
+					return "[ЗАСАДА] Это была ловушка! Вы ранены. (-10 здоровья)\nНо вы заметили следы настоящих припасов."
+				}
+				p.AddEat(3)
+				p.AddWater(2)
+				p.Flags["helped_cries"] = true
+				return "[ПОМОЩЬ] Вы отбили атаку и нашли припасы в руинах! (Еда: +3, Вода: +2)"
+			},
+			func(p *player.Player) string {
+				p.Flags["ignored_cries"] = true
+				return "[ОСТОРОЖНО] Вы прошли мимо. Крики стихли."
+			},
+		},
+		Category: "helper",
+	})
+	pool = append(pool, ev33)
+
+	// 34. Раненый бандит
+	ev34, _ := ConstructEvent(Event{
+		Message:  "[БАНДИТ] Вы нашли раненого бандита у дороги. Он просит пощады.",
+		Variants: [2]string{"Добить бандита", "Перевязать и отпустить"},
+		Actions: [2]func(p *player.Player) string{
+			func(p *player.Player) string {
+				p.AddEat(3)
+				p.Flags["killed_bandit"] = true
+				return "[БЕЗЖАЛОСТНОСТЬ] Вы обыскали тело. (Еда: +3)"
+			},
+			func(p *player.Player) string {
+				p.ChangeHealth(-5)
+				p.Flags["spared_bandit"] = true
+				return "[МИЛОСЕРДИЕ] Бандит благодарит вас и уходит. (-5 здоровья на бинты)"
+			},
+		},
+		Category: "combat",
+	})
+	pool = append(pool, ev34)
+
+	// 35. Таинственная карта
+	ev35, _ := ConstructEvent(Event{
+		Message:  "[КАРТА] В старом тайнике вы нашли потрёпанную карту с пометками.",
+		Variants: [2]string{"Взять карту и изучить", "Оставить — мало ли что"},
+		Actions: [2]func(p *player.Player) string{
+			func(p *player.Player) string {
+				p.Flags["found_map"] = true
+				return "[НАХОДКА] На карте отмечен тайник! Нужно будет поискать."
+			},
+			func(p *player.Player) string {
+				return "[ВЫБОР] Вы оставили карту."
+			},
+		},
+		Category: "find",
+	})
+	pool = append(pool, ev35)
+
+	// 36. Старик просит еду
+	ev36, _ := ConstructEvent(Event{
+		Message:  "[СТАРИК] Дряхлый старик сидит у дороги и просит еды.",
+		Variants: [2]string{"Поделиться едой ( -3 еды)", "Пройти мимо"},
+		Actions: [2]func(p *player.Player) string{
+			func(p *player.Player) string {
+				if p.Eat < 3 {
+					p.Flags["refused_oldman"] = true
+					return "[НЕУДАЧА] У вас самих не хватает еды. Старик понимающе кивает."
+				}
+				p.AddEat(-3)
+				p.Flags["fed_oldman"] = true
+				return "[ДОБРОТА] Старик благословляет вас: «Добро вернётся». (Еда: -3)"
+			},
+			func(p *player.Player) string {
+				p.Flags["refused_oldman"] = true
+				return "[ВЫБОР] Вы прошли мимо. Старик смотрит вслед."
+			},
+		},
+		Category: "helper",
+	})
+	pool = append(pool, ev36)
+
+	// 37. Запертый склад
+	ev37, _ := ConstructEvent(Event{
+		Message:  "[СКЛАД] Вы нашли запертый склад с довоенными припасами.",
+		Variants: [2]string{"Взломать замок (шумно)", "Поискать другой вход"},
+		Actions: [2]func(p *player.Player) string{
+			func(p *player.Player) string {
+				risk := rand.Intn(100)
+				if risk < 35 {
+					p.ChangeHealth(-15)
+					p.Flags["broke_storage"] = true
+					return "[ОПАСНОСТЬ] На шум пришли бандиты! Вы ранены. (-15 здоровья)"
+				}
+				p.AddEat(5)
+				p.AddWater(5)
+				p.Flags["broke_storage"] = true
+				return "[НАХОДКА] Внутри ящики с консервами и водой! (Еда: +5, Вода: +5)"
+			},
+			func(p *player.Player) string {
+				p.AddEat(2)
+				p.AddWater(2)
+				p.Flags["left_storage"] = true
+				return "[ПОИСК] Вы нашли чёрный вход и взяли немного припасов. (Еда: +2, Вода: +2)"
+			},
+		},
+		Category: "find",
+	})
+	pool = append(pool, ev37)
+
+	// 38. Заброшенная рация
+	ev38, _ := ConstructEvent(Event{
+		Message:  "[РАЦИЯ] В заброшенном лагере вы нашли рабочую рацию.",
+		Variants: [2]string{"Попытаться вызвать помощь", "Не рисковать — сигнал могут перехватить"},
+		Actions: [2]func(p *player.Player) string{
+			func(p *player.Player) string {
+				risk := rand.Intn(100)
+				if risk < 30 {
+					p.ChangeHealth(-10)
+					return "[ПЕРЕХВАТ] Сигнал перехватили бандиты! Они выследили вас. (-10 здоровья)"
+				}
+				p.Flags["answered_signal"] = true
+				return "[УДАЧА] Вы связались с дружественным караваном! Они обещали помочь при встрече."
+			},
+			func(p *player.Player) string {
+				return "[ВЫБОР] Вы оставили рацию."
+			},
+		},
+		Category: "helper",
+	})
+	pool = append(pool, ev38)
+
 	return pool
 }
 
