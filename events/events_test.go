@@ -79,8 +79,8 @@ func TestConstructEventsPool(t *testing.T) {
 	if len(pool) == 0 {
 		t.Error("Expected non-empty event pool")
 	}
-	if len(pool) < 20 {
-		t.Errorf("Expected at least 20 events, got %d", len(pool))
+	if len(pool) < 30 {
+		t.Errorf("Expected at least 30 events, got %d", len(pool))
 	}
 }
 
@@ -94,7 +94,7 @@ func TestEventExecute_ValidChoice(t *testing.T) {
 			func(p *player.Player) string { return "OK" },
 		},
 	}
-	p := player.CreatePlayer()
+	p := player.CreatePlayer(player.DifficultyNormal, player.ClassSurvivor)
 
 	resultMessage, err := event.Execute(1, &p)
 
@@ -118,7 +118,7 @@ func TestEventExecute_InvalidChoice(t *testing.T) {
 			func(p *player.Player) string { return "OK" },
 		},
 	}
-	p := player.CreatePlayer()
+	p := player.CreatePlayer(player.DifficultyNormal, player.ClassSurvivor)
 
 	_, err := event.Execute(3, &p)
 
@@ -133,7 +133,7 @@ func TestEventExecute_NilAction(t *testing.T) {
 		Variants: [2]string{"Option 1", "Option 2"},
 		Actions:  [2]func(p *player.Player) string{nil, nil},
 	}
-	p := player.CreatePlayer()
+	p := player.CreatePlayer(player.DifficultyNormal, player.ClassSurvivor)
 
 	_, err := event.Execute(1, &p)
 
@@ -169,15 +169,13 @@ func TestGetRandomEvent_EmptyPool(t *testing.T) {
 	}
 }
 
-// Тест для события с водой
 func TestEvent_AddWaterEvent(t *testing.T) {
 	pool := ConstructEventsPool()
-	p := player.CreatePlayer()
+	p := player.CreatePlayer(player.DifficultyNormal, player.ClassSurvivor)
 	initialWater := p.Water
 
-	// Находим событие с водой и выполняем его
 	for _, event := range pool {
-		if event.Message == "🌊 Вы нашли чистый ручей среди скал." {
+		if event.Message == "[РУЧЕЙ] Вы нашли чистый ручей среди скал." {
 			resultMessage, err := event.Execute(1, &p)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
@@ -194,18 +192,15 @@ func TestEvent_AddWaterEvent(t *testing.T) {
 	t.Error("Water event not found in pool")
 }
 
-// Тест для события с атакой
 func TestEvent_AttackEvent(t *testing.T) {
 	pool := ConstructEventsPool()
-	p := player.CreatePlayer()
+	p := player.CreatePlayer(player.DifficultyNormal, player.ClassSurvivor)
 	p.Health = 80
 
-	// Находим событие с атакой и выполняем его
 	for _, event := range pool {
-		if event.Message == "⚔️ На вас напал бродяга с ножом!" {
+		if event.Message == "[НАПАДЕНИЕ] На вас напал бродяга с ножом!" {
 			resultMessage, err := event.Execute(1, &p)
 			if err != nil && p.Health > 0 {
-				// Если игрок выжил, ошибки быть не должно
 				if p.Health > 0 {
 					t.Errorf("Unexpected error: %v", err)
 				}
@@ -222,14 +217,12 @@ func TestEvent_AttackEvent(t *testing.T) {
 	t.Error("Attack event not found in pool")
 }
 
-// Тест для всех событий - проверяем что они не паникуют
 func TestAllEvents_NoPanic(t *testing.T) {
 	pool := ConstructEventsPool()
 
 	for i, event := range pool {
-		p := player.CreatePlayer()
+		p := player.CreatePlayer(player.DifficultyNormal, player.ClassSurvivor)
 
-		// Тестируем оба варианта выбора
 		for choice := 1; choice <= 2; choice++ {
 			func() {
 				defer func() {
@@ -239,7 +232,6 @@ func TestAllEvents_NoPanic(t *testing.T) {
 				}()
 
 				resultMessage, err := event.Execute(choice, &p)
-				// Просто проверяем что выполнилось без паники
 				_ = resultMessage
 				_ = err
 			}()
@@ -247,17 +239,15 @@ func TestAllEvents_NoPanic(t *testing.T) {
 	}
 }
 
-// Тест на количество событий
 func TestEventsCount(t *testing.T) {
 	pool := ConstructEventsPool()
-	expectedCount := 20
+	expectedCount := 32
 
 	if len(pool) != expectedCount {
 		t.Errorf("Expected %d events, got %d", expectedCount, len(pool))
 	}
 }
 
-// Тест на уникальность сообщений событий
 func TestUniqueEventMessages(t *testing.T) {
 	pool := ConstructEventsPool()
 	messages := make(map[string]bool)
@@ -270,61 +260,55 @@ func TestUniqueEventMessages(t *testing.T) {
 	}
 }
 
-// Тест на выполнение всех событий без критических ошибок
 func TestAllEventsExecution(t *testing.T) {
 	pool := ConstructEventsPool()
 
 	for i, event := range pool {
 		for choice := 1; choice <= 2; choice++ {
-			p := player.CreatePlayer()
+			p := player.CreatePlayer(player.DifficultyNormal, player.ClassSurvivor)
 			p.Health = 100
 			p.Eat = 10
 			p.Water = 10
+			cfg := p.GetCfg()
 
 			resultMessage, err := event.Execute(choice, &p)
 
 			if err != nil {
-				// Проверяем, что ошибка только из-за смерти
 				if p.Health > 0 {
 					t.Errorf("Event %d, choice %d unexpected error: %v", i, choice, err)
 				}
 			}
 
-			// Проверяем, что результат не пустой (если нет ошибки)
 			if err == nil && resultMessage == "" {
 				t.Errorf("Event %d, choice %d returned empty message", i, choice)
 			}
 
-			// Проверяем, что значения в допустимых пределах
-			if p.Health < 0 || p.Health > player.MaxHealth {
+			if p.Health < 0 || p.Health > player.MaxHealth(p.Class) {
 				t.Errorf("Event %d, choice %d health out of bounds: %d", i, choice, p.Health)
 			}
-			if p.Eat < 0 || p.Eat > player.MaxResourceLimit {
+			if p.Eat < 0 || p.Eat > cfg.MaxResource {
 				t.Errorf("Event %d, choice %d eat out of bounds: %d", i, choice, p.Eat)
 			}
-			if p.Water < 0 || p.Water > player.MaxResourceLimit {
+			if p.Water < 0 || p.Water > cfg.MaxResource {
 				t.Errorf("Event %d, choice %d water out of bounds: %d", i, choice, p.Water)
 			}
 		}
 	}
 }
 
-// Тест для проверки, что все события возвращают сообщение
 func TestAllEventsReturnMessage(t *testing.T) {
 	pool := ConstructEventsPool()
 
 	for i, event := range pool {
 		for choice := 1; choice <= 2; choice++ {
-			p := player.CreatePlayer()
+			p := player.CreatePlayer(player.DifficultyNormal, player.ClassSurvivor)
 
 			resultMessage, err := event.Execute(choice, &p)
 
-			// Если нет ошибки, сообщение должно быть не пустым
 			if err == nil && resultMessage == "" {
 				t.Errorf("Event %d, choice %d returned empty message but no error", i, choice)
 			}
 
-			// Если есть ошибка (смерть), сообщение все равно должно быть
 			if err != nil && resultMessage == "" {
 				t.Errorf("Event %d, choice %d returned error but empty message: %v", i, choice, err)
 			}

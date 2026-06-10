@@ -5,7 +5,7 @@ import (
 )
 
 func BenchmarkStartNewDay(b *testing.B) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -14,7 +14,7 @@ func BenchmarkStartNewDay(b *testing.B) {
 }
 
 func BenchmarkChangeHealth(b *testing.B) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -24,7 +24,7 @@ func BenchmarkChangeHealth(b *testing.B) {
 }
 
 func BenchmarkAddResource(b *testing.B) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

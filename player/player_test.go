@@ -5,16 +5,17 @@ import (
 )
 
 func TestCreatePlayer(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 
-	if p.Health != MaxHealth {
-		t.Errorf("Expected Health %d, got %d", MaxHealth, p.Health)
+	if p.Health != MaxHealth(ClassSurvivor) {
+		t.Errorf("Expected Health %d, got %d", MaxHealth(ClassSurvivor), p.Health)
 	}
-	if p.Eat != StartEat {
-		t.Errorf("Expected Eat %d, got %d", StartEat, p.Eat)
+	cfg := DifficultyConfigs[DifficultyNormal]
+	if p.Eat != cfg.StartEat {
+		t.Errorf("Expected Eat %d, got %d", cfg.StartEat, p.Eat)
 	}
-	if p.Water != StartWater {
-		t.Errorf("Expected Water %d, got %d", StartWater, p.Water)
+	if p.Water != cfg.StartWater {
+		t.Errorf("Expected Water %d, got %d", cfg.StartWater, p.Water)
 	}
 	if p.ThisDay != 1 {
 		t.Errorf("Expected ThisDay 1, got %d", p.ThisDay)
@@ -25,25 +26,26 @@ func TestCreatePlayer(t *testing.T) {
 }
 
 func TestStartNewDay_Success(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
+	cfg := DifficultyConfigs[DifficultyNormal]
 	err := p.StartNewDay()
 
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	if p.Eat != StartEat-1 {
-		t.Errorf("Expected Eat %d, got %d", StartEat-1, p.Eat)
+	if p.Eat != cfg.StartEat-cfg.ConsumeFood {
+		t.Errorf("Expected Eat %d, got %d", cfg.StartEat-cfg.ConsumeFood, p.Eat)
 	}
-	if p.Water != StartWater-2 {
-		t.Errorf("Expected Water %d, got %d", StartWater-2, p.Water)
+	if p.Water != cfg.StartWater-cfg.ConsumeWater {
+		t.Errorf("Expected Water %d, got %d", cfg.StartWater-cfg.ConsumeWater, p.Water)
 	}
-	if p.ThisDay != 2 {
-		t.Errorf("Expected ThisDay 2, got %d", p.ThisDay)
+	if p.ThisDay != 1 {
+		t.Errorf("Expected ThisDay 1 (unchanged), got %d", p.ThisDay)
 	}
 }
 
 func TestStartNewDay_NoFood(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 	p.Eat = 0
 	p.Health = 80
 
@@ -61,7 +63,7 @@ func TestStartNewDay_NoFood(t *testing.T) {
 }
 
 func TestStartNewDay_NoFood_Death(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 	p.Eat = 0
 	p.Health = 15
 
@@ -79,7 +81,7 @@ func TestStartNewDay_NoFood_Death(t *testing.T) {
 }
 
 func TestStartNewDay_NoWater(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 	p.Water = 1
 	p.Health = 80
 
@@ -94,7 +96,7 @@ func TestStartNewDay_NoWater(t *testing.T) {
 }
 
 func TestStartNewDay_NoWater_Death(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 	p.Water = 1
 	p.Health = 15
 
@@ -112,8 +114,9 @@ func TestStartNewDay_NoWater_Death(t *testing.T) {
 }
 
 func TestStartNewDay_MaxDaysReached(t *testing.T) {
-	p := CreatePlayer()
-	p.ThisDay = MaxDays
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
+	cfg := DifficultyConfigs[DifficultyNormal]
+	p.ThisDay = cfg.MaxDays
 
 	err := p.StartNewDay()
 
@@ -126,7 +129,7 @@ func TestStartNewDay_MaxDaysReached(t *testing.T) {
 }
 
 func TestStartNewDay_Locked(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 	p.Lock = true
 
 	err := p.StartNewDay()
@@ -137,7 +140,7 @@ func TestStartNewDay_Locked(t *testing.T) {
 }
 
 func TestAddEat(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 	initialEat := p.Eat
 
 	p.AddEat(5)
@@ -148,16 +151,17 @@ func TestAddEat(t *testing.T) {
 }
 
 func TestAddEat_OverLimit(t *testing.T) {
-	p := CreatePlayer()
-	p.AddEat(MaxResourceLimit + 10)
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
+	cfg := DifficultyConfigs[DifficultyNormal]
+	p.AddEat(cfg.MaxResource + 10)
 
-	if p.Eat != MaxResourceLimit {
-		t.Errorf("Expected Eat capped at %d, got %d", MaxResourceLimit, p.Eat)
+	if p.Eat != cfg.MaxResource {
+		t.Errorf("Expected Eat capped at %d, got %d", cfg.MaxResource, p.Eat)
 	}
 }
 
 func TestAddWater(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 	initialWater := p.Water
 
 	p.AddWater(5)
@@ -168,16 +172,17 @@ func TestAddWater(t *testing.T) {
 }
 
 func TestAddWater_OverLimit(t *testing.T) {
-	p := CreatePlayer()
-	p.AddWater(MaxResourceLimit + 10)
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
+	cfg := DifficultyConfigs[DifficultyNormal]
+	p.AddWater(cfg.MaxResource + 10)
 
-	if p.Water != MaxResourceLimit {
-		t.Errorf("Expected Water capped at %d, got %d", MaxResourceLimit, p.Water)
+	if p.Water != cfg.MaxResource {
+		t.Errorf("Expected Water capped at %d, got %d", cfg.MaxResource, p.Water)
 	}
 }
 
 func TestChangeHealth_Negative(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 	p.Health = 80
 
 	err := p.ChangeHealth(-30)
@@ -191,7 +196,7 @@ func TestChangeHealth_Negative(t *testing.T) {
 }
 
 func TestChangeHealth_Negative_Death(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 	p.Health = 20
 
 	err := p.ChangeHealth(-30)
@@ -208,7 +213,7 @@ func TestChangeHealth_Negative_Death(t *testing.T) {
 }
 
 func TestChangeHealth_Positive(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 	p.Health = 50
 
 	err := p.ChangeHealth(30)
@@ -222,7 +227,7 @@ func TestChangeHealth_Positive(t *testing.T) {
 }
 
 func TestChangeHealth_Positive_OverMax(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 	p.Health = 90
 
 	err := p.ChangeHealth(30)
@@ -230,13 +235,13 @@ func TestChangeHealth_Positive_OverMax(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	if p.Health != MaxHealth {
-		t.Errorf("Expected Health capped at %d, got %d", MaxHealth, p.Health)
+	if p.Health != MaxHealth(ClassSurvivor) {
+		t.Errorf("Expected Health capped at %d, got %d", MaxHealth(ClassSurvivor), p.Health)
 	}
 }
 
 func TestChangeHealth_Locked(t *testing.T) {
-	p := CreatePlayer()
+	p := CreatePlayer(DifficultyNormal, ClassSurvivor)
 	p.Lock = true
 
 	err := p.ChangeHealth(10)
